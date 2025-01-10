@@ -1,0 +1,31 @@
+package app
+
+import (
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+)
+
+func StartServer() {
+	config, err := LoadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v\n", err)
+		return
+	}
+
+	addr := fmt.Sprintf(":%d", config.Server.Port)
+	fmt.Printf("Starting Gin server on %s...\n", addr)
+
+	// Initialize the Gin router
+	r := gin.Default()
+
+	// Define routes
+	r.GET("/", func(c *gin.Context) {
+		c.String(200, "Welcome to the SanDB Server!")
+	})
+
+	// Start the server
+	if err := r.Run(addr); err != nil {
+		fmt.Printf("Failed to start server: %v\n", err)
+	}
+}
