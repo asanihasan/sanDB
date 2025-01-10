@@ -1,0 +1,34 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build artifacts
+/bin/
+/out/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Go-related files
+/go.sum
+/go.mod
+*.log
+
+# Temporary files and IDE/editor settings
+*.tmp
+*.swp
+*.swo
+*.bak
+.idea/
+.vscode/
+*.iml
+
+# Ignore all files inside data/
+data/*
+
+# Exclude the directory itself and any placeholder files
+!data/
+!data/.gitkeep
