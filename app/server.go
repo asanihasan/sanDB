@@ -30,9 +30,7 @@ func StartServer() {
 	})
 
 	// Define routes
-	r.GET("/", func(c *gin.Context) {
-		c.String(200, "Welcome to the SanDB Server!")
-	})
+	RegisterRoutes(r)
 
 	// Start the server
 	if err := r.Run(addr); err != nil {
