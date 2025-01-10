@@ -27,7 +27,7 @@ SanDB/
 ├── app/
 │   ├── server.go         # Web server setup
 │   ├── config.go         # Configuration loader
-│   ├── api.go            # Collection-related routes
+│   ├── collections.go    # Collection-related routes
 ├── config/
 │   ├── config.yml        # Configuration file
 ├── data/                 # Directory for collections
