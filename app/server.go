@@ -19,6 +19,16 @@ func StartServer() {
 	// Initialize the Gin router
 	r := gin.Default()
 
+	// Middleware to check authorization token
+	r.Use(func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		if token != config.Server.Token {
+			c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized"})
+			return
+		}
+		c.Next()
+	})
+
 	// Define routes
 	r.GET("/", func(c *gin.Context) {
 		c.String(200, "Welcome to the SanDB Server!")
