@@ -50,6 +50,10 @@ func RegisterRoutes(r *gin.Engine) {
 	// /collection/:collection_name endpoints
 	r.GET("/collections/:collection_name", collection_detail)
 	r.PUT("/collections/:collection_name", add_collection)
-	r.DELETE("/collections/:collection_name", del_collection)
+	r.DELETE("/collections/:collection_name", delete_collection)
 	r.PATCH("/collections/:collection_name", update_collection)
+	
+	r.PUT("/data/:collection_name", add_data)
+	r.GET("/data/:collection_name", get_data)
+	r.DELETE("/data/:collection_name", delete_data)
 }

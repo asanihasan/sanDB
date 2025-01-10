@@ -62,7 +62,7 @@ func add_collection(c *gin.Context) {
 	c.JSON(200, gin.H{"message": fmt.Sprintf("Collection '%s' already exists", collectionName)})
 }
 
-func del_collection(c *gin.Context) {
+func delete_collection(c *gin.Context) {
 	collectionName := c.Param("collection_name")
 	dataPath := "./data" // Path to the data directory
 
