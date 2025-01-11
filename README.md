@@ -26,6 +26,7 @@ SanDB is a lightweight binary data storage backend written in Go, using the Gin 
 SanDB/
 ├── app/
 │   ├── server.go         # Web server setup
+│   ├── data.go           # Web server setup
 │   ├── config.go         # Configuration loader
 │   ├── collections.go    # Collection-related routes
 ├── config/
@@ -55,7 +56,7 @@ server:
 
 1. **List Collections**
 
-   - **Endpoint**: `GET /collection`
+   - **Endpoint**: `GET /collections`
    - **Description**: Retrieves a list of all collections.
    - **Response**:
      ```json
@@ -98,7 +99,7 @@ server:
      ```
 
 5. **Rename a Collection**
-   - **Endpoint**: `PATCH /collections?old_name=old&new_name=new`
+   - **Endpoint**: `PATCH /collections/:collection_name?new_name=new`
    - **Description**: Renames an existing collection.
    - **Response**:
      ```json
@@ -123,19 +124,31 @@ curl -H "Authorization: your-secret-token" http://localhost:6969/collection
 
 ## Running the Project
 
-1. **Install Dependencies**:
+1. **Clone Repository**:
+
+   ```bash
+   git clone https://github.com/asanihasan/sanDB.git
+   ```
+
+2. **init go mod**:
+
+   ```bash
+   go mod init sanDB
+   ```
+
+3. **Install Dependencies**:
 
    ```bash
    go mod tidy
    ```
 
-2. **Run the Server**:
+4. **Run the Server**:
 
    ```bash
    go run main.go
    ```
 
-3. **Access the API**:
+5. **Access the API**:
    Visit `http://localhost:6969/`.
 
 ---
