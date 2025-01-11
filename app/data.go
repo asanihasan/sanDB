@@ -208,44 +208,50 @@ func get_data(c *gin.Context) {
 				if file.IsDir() {
 					continue
 				}
-
+			
 				segment, err := strconv.Atoi(file.Name()[:len(file.Name())-4])
 				if err != nil {
 					continue
 				}
-
+			
 				if (year == startYear && day == startDay && segment < startSegment) ||
 					(year == endYear && day == endDay && segment > endSegment) {
 					continue
 				}
-
+			
 				filePath := fmt.Sprintf("%s/%s", dayDir, file.Name())
 				fileData := make(map[int64]string)
-
+			
+				// Open the file
 				f, err := os.Open(filePath)
 				if err != nil {
 					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to open file: %v", err)})
 					return
 				}
-				defer f.Close()
-
-				decoder := gob.NewDecoder(f)
-				if err := decoder.Decode(&fileData); err != nil {
-					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode file: %v", err)})
-					return
-				}
-
+			
+				// Decode the file and immediately close it after processing
+				func() {
+					defer f.Close()
+			
+					decoder := gob.NewDecoder(f)
+					if err := decoder.Decode(&fileData); err != nil {
+						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode file: %v", err)})
+						return
+					}
+				}()
+			
+				// Process the file data
 				for ts, data := range fileData {
 					if ts >= start && ts <= end {
 						var deserializedData interface{}
-
+			
 						// Attempt to unmarshal the data into a generic interface{}
 						err := json.Unmarshal([]byte(data), &deserializedData)
 						if err != nil {
 							// If unmarshaling fails, keep the original data as is
 							deserializedData = data
 						}
-
+			
 						result = append(result, map[string]interface{}{
 							"time": ts,
 							"data": deserializedData,
