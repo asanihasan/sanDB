@@ -13,8 +13,8 @@
 Thumbs.db
 
 # Go-related files
-/go.sum
-/go.mod
+go.sum
+go.mod
 *.log
 
 # Temporary files and IDE/editor settings
