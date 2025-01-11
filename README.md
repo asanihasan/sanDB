@@ -26,7 +26,7 @@ SanDB is a lightweight binary data storage backend written in Go, using the Gin 
 SanDB/
 ├── app/
 │   ├── server.go         # Web server setup
-│   ├── data.go           # Web server setup
+│   ├── data.go           # Data-related routes
 │   ├── config.go         # Configuration loader
 │   ├── collections.go    # Collection-related routes
 ├── config/
@@ -52,7 +52,9 @@ server:
 
 ## API Endpoints
 
-### **Base URL**: `http://localhost:<PORT>/`
+**Base URL**: `http://localhost:<PORT>/`
+
+### **Collections**
 
 1. **List Collections**
 
@@ -107,6 +109,108 @@ server:
        "message": "Collection 'old' renamed to 'new'"
      }
      ```
+
+### **Data**
+
+1. **Add Data**
+    - **Endpoint**: `PUT /data/:collection_name`
+
+    - **Description**: Adds data to the specified collection.
+    - **Parameters**:
+      - `:collection_name` (path): Name of the collection to add data to.
+    - **Request Body** (JSON Array):
+      ```json
+      [
+        {
+          "time": 1672531200000, // Millisecond timestamp
+          "data": "example data" // Data (can be any JSON type)
+        },
+        {
+          "time": 1672534800000,
+          "data": { "key": "value" }
+        }
+      ]
+      ```
+    - **Response**:
+      - `201 Created`: Data added successfully.
+      - `400 Bad Request`: Invalid input or missing fields.
+      - `404 Not Found`: Collection does not exist.
+      - `500 Internal Server Error`: Server-side error.
+
+2. **Retrieve Data**
+    - **Endpoint**: `GET /data/:collection_name`
+
+    - **Description**: Retrieves data from the specified collection within a time range.
+    - **Parameters**:
+      - `:collection_name` (path): Name of the collection to retrieve data from.
+      - `start` (query): Start time in milliseconds (required).
+      - `end` (query): End time in milliseconds (required).
+      - `limit` (query): Maximum number of records to return (optional).
+      - `offset` (query): Number of records to skip (optional).
+    - **Response**:
+      - `200 OK`: Returns a JSON array of data points.
+        ```json
+        {
+          "data": [
+            {
+              "time": 1672531200000,
+              "data": "example data"
+            },
+            {
+              "time": 1672534800000,
+              "data": { "key": "value" }
+            }
+          ]
+        }
+        ```
+      - `400 Bad Request`: Missing or invalid query parameters.
+      - `404 Not Found`: Collection does not exist.
+      - `500 Internal Server Error`: Server-side error.
+
+3. **Delete Data**
+    - **Endpoint**: `DELETE /data/:collection_name`
+
+    - **Description**: Deletes data in the specified collection within a time range.
+    - **Parameters**:
+      - `:collection_name` (path): Name of the collection to delete data from.
+      - `start` (query): Start time in milliseconds (required).
+      - `end` (query): End time in milliseconds (required).
+    - **Response**:
+      - `200 OK`: Data deleted successfully.
+      - `400 Bad Request`: Missing or invalid query parameters.
+      - `404 Not Found`: Collection does not exist.
+      - `500 Internal Server Error`: Server-side error.
+
+---
+
+## **Example Usage**
+
+### Add Data Example
+```bash
+curl -X PUT http://localhost:6969/data/my_collection \
+-H "Content-Type: application/json" \
+-d '[
+  {"time": 1672531200000, "data": "example data"},
+  {"time": 1672534800000, "data": {"key": "value"}}
+]'
+```
+
+### Retrieve Data Example
+```bash
+curl -X GET "http://localhost:6969/data/my_collection?start=1672531200000&end=1672538400000&limit=10&offset=0"
+```
+
+### Delete Data Example
+```bash
+curl -X DELETE "http://localhost:6969/data/my_collection?start=1672531200000&end=1672538400000"
+```
+
+---
+
+## Notes
+- **Time Range**: Timestamps must be in milliseconds (Unix epoch format).
+- **Collections**: Collections must exist before adding, retrieving, or deleting data.
+- **Error Handling**: Ensure proper handling of API responses to manage errors effectively.
 
 ---
 
