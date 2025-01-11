@@ -61,6 +61,7 @@ server:
    - **Endpoint**: `GET /collections`
    - **Description**: Retrieves a list of all collections.
    - **Response**:
+     - **Code**: 200 OK
      ```json
      {
        "collections": ["collection1", "collection2"]
@@ -72,9 +73,16 @@ server:
    - **Endpoint**: `GET /collections/:collection_name`
    - **Description**: Checks if a collection exists.
    - **Response**:
+     - **Code**: 200 OK
      ```json
      {
        "message": "Collection 'collection_name' exists"
+     }
+     ```
+     - **Code**: 404 Not Found
+     ```json
+     {
+       "error": "Collection 'collection_name' does not exist"
      }
      ```
 
@@ -83,9 +91,16 @@ server:
    - **Endpoint**: `PUT /collections/:collection_name`
    - **Description**: Creates a new collection.
    - **Response**:
+     - **Code**: 201 Created
      ```json
      {
        "message": "Collection 'collection_name' created"
+     }
+     ```
+     - **Code**: 409 Conflict
+     ```json
+     {
+       "error": "Collection 'collection_name' already exists"
      }
      ```
 
@@ -94,22 +109,43 @@ server:
    - **Endpoint**: `DELETE /collections/:collection_name`
    - **Description**: Deletes a collection.
    - **Response**:
+     - **Code**: 200 OK
      ```json
      {
        "message": "Collection 'collection_name' deleted successfully"
      }
      ```
+     - **Code**: 404 Not Found
+     ```json
+     {
+       "error": "Collection 'collection_name' does not exist"
+     }
+     ```
 
 5. **Rename a Collection**
+
    - **Endpoint**: `PATCH /collections/:collection_name?new_name=new`
    - **Description**: Renames an existing collection.
    - **Response**:
+     - **Code**: 200 OK
      ```json
      {
        "message": "Collection 'old' renamed to 'new'"
      }
      ```
-
+     - **Code**: 404 Not Found
+     ```json
+     {
+       "error": "Collection 'old' does not exist"
+     }
+     ```
+     - **Code**: 409 Conflict
+     ```json
+     {
+       "error": "Collection 'new' already exists"
+     }
+     ```
+     
 ### **Data**
 
 1. **Add Data**
