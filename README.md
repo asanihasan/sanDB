@@ -101,6 +101,8 @@ server:
      - `404 Not Found` : Collection 'old' does not exist
      - `409 Conflict` : Collection 'new' already exists
 
+---
+
 ### **Data**
 
 1. **Add Data**

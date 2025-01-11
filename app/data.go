@@ -75,16 +75,18 @@ func add_data(c *gin.Context) {
 					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to open .san file: %v", err)})
 					return
 				}
-				defer file.Close()
+				// Explicitly close the file after reading
+				func() {
+					defer file.Close()
 
-				// Temporary variable to decode data
-				var tempData map[int64]string
-				decoder := gob.NewDecoder(file)
-				if err := decoder.Decode(&tempData); err != nil {
-					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode .san file: %v", err)})
-					return
-				}
-				inMemoryData[sanFilePath] = tempData
+					var tempData map[int64]string
+					decoder := gob.NewDecoder(file)
+					if err := decoder.Decode(&tempData); err != nil {
+						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode .san file: %v", err)})
+						return
+					}
+					inMemoryData[sanFilePath] = tempData
+				}()
 			}
 		}
 
@@ -99,15 +101,16 @@ func add_data(c *gin.Context) {
 			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to save .san file: %v", err)})
 			return
 		}
-		defer file.Close()
+		func() {
+			defer file.Close()
 
-		encoder := gob.NewEncoder(file)
-		if err := encoder.Encode(data); err != nil {
-			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to encode data to .san file: %v", err)})
-			return
-		}
+			encoder := gob.NewEncoder(file)
+			if err := encoder.Encode(data); err != nil {
+				c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to encode data to .san file: %v", err)})
+				return
+			}
+		}()
 	}
-
 	c.JSON(201, gin.H{"message": "Data added successfully"})
 }
 
@@ -234,9 +237,18 @@ func get_data(c *gin.Context) {
 
 				for ts, data := range fileData {
 					if ts >= start && ts <= end {
+						var deserializedData interface{}
+
+						// Attempt to unmarshal the data into a generic interface{}
+						err := json.Unmarshal([]byte(data), &deserializedData)
+						if err != nil {
+							// If unmarshaling fails, keep the original data as is
+							deserializedData = data
+						}
+
 						result = append(result, map[string]interface{}{
 							"time": ts,
-							"data": data,
+							"data": deserializedData,
 						})
 					}
 				}
