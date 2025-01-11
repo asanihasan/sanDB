@@ -61,7 +61,7 @@ server:
    - **Endpoint**: `GET /collections`
    - **Description**: Retrieves a list of all collections.
    - **Response**:
-     - **Code**: 200 OK
+     - `200 OK` : Return list of collections
      ```json
      {
        "collections": ["collection1", "collection2"]
@@ -73,79 +73,34 @@ server:
    - **Endpoint**: `GET /collections/:collection_name`
    - **Description**: Checks if a collection exists.
    - **Response**:
-     - **Code**: 200 OK
-     ```json
-     {
-       "message": "Collection 'collection_name' exists"
-     }
-     ```
-     - **Code**: 404 Not Found
-     ```json
-     {
-       "error": "Collection 'collection_name' does not exist"
-     }
-     ```
+     - `200 OK` : Collection 'collection_name' exists
+     - `404 Not Found` : Collection 'collection_name' does not exist
 
 3. **Create a Collection**
 
    - **Endpoint**: `PUT /collections/:collection_name`
    - **Description**: Creates a new collection.
    - **Response**:
-     - **Code**: 201 Created
-     ```json
-     {
-       "message": "Collection 'collection_name' created"
-     }
-     ```
-     - **Code**: 409 Conflict
-     ```json
-     {
-       "error": "Collection 'collection_name' already exists"
-     }
-     ```
+     - `201 Created` : Collection 'collection_name' created
+     - `409 Conflict` : Collection 'collection_name' already exists
 
 4. **Delete a Collection**
 
    - **Endpoint**: `DELETE /collections/:collection_name`
    - **Description**: Deletes a collection.
    - **Response**:
-     - **Code**: 200 OK
-     ```json
-     {
-       "message": "Collection 'collection_name' deleted successfully"
-     }
-     ```
-     - **Code**: 404 Not Found
-     ```json
-     {
-       "error": "Collection 'collection_name' does not exist"
-     }
-     ```
+     - `200 OK` : Collection 'collection_name' deleted successfully
+     - `404 Not Found` : Collection 'collection_name' does not exist
 
 5. **Rename a Collection**
 
    - **Endpoint**: `PATCH /collections/:collection_name?new_name=new`
    - **Description**: Renames an existing collection.
    - **Response**:
-     - **Code**: 200 OK
-     ```json
-     {
-       "message": "Collection 'old' renamed to 'new'"
-     }
-     ```
-     - **Code**: 404 Not Found
-     ```json
-     {
-       "error": "Collection 'old' does not exist"
-     }
-     ```
-     - **Code**: 409 Conflict
-     ```json
-     {
-       "error": "Collection 'new' already exists"
-     }
-     ```
-     
+     - `200 OK` : Collection 'old' renamed to 'new'
+     - `404 Not Found` : Collection 'old' does not exist
+     - `409 Conflict` : Collection 'new' already exists
+
 ### **Data**
 
 1. **Add Data**
