@@ -8,11 +8,15 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
-var inMemoryData = make(map[string]map[int64]string) // File path -> Data map
+var (
+	inMemoryData = make(map[string]map[int64]string) // File path -> Data map
+	dataMutex    sync.RWMutex                       // Mutex to handle concurrent access
+)
 
 func add_data(c *gin.Context) {
 	dataPath := "./data" // Base directory for data
@@ -64,7 +68,8 @@ func add_data(c *gin.Context) {
 			return
 		}
 
-		// Load file into memory if not already loaded
+		// Safely load file into memory if not already loaded
+		dataMutex.Lock()
 		if _, exists := inMemoryData[sanFilePath]; !exists {
 			inMemoryData[sanFilePath] = make(map[int64]string)
 
@@ -72,45 +77,49 @@ func add_data(c *gin.Context) {
 			if _, err := os.Stat(sanFilePath); !os.IsNotExist(err) {
 				file, err := os.Open(sanFilePath)
 				if err != nil {
+					dataMutex.Unlock()
 					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to open .san file: %v", err)})
 					return
 				}
-				// Explicitly close the file after reading
-				func() {
-					defer file.Close()
+				defer file.Close()
 
-					var tempData map[int64]string
-					decoder := gob.NewDecoder(file)
-					if err := decoder.Decode(&tempData); err != nil {
-						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode .san file: %v", err)})
-						return
-					}
-					inMemoryData[sanFilePath] = tempData
-				}()
+				// Temporary variable to decode data
+				var tempData map[int64]string
+				decoder := gob.NewDecoder(file)
+				if err := decoder.Decode(&tempData); err != nil {
+					dataMutex.Unlock()
+					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode .san file: %v", err)})
+					return
+				}
+				inMemoryData[sanFilePath] = tempData
 			}
 		}
 
 		// Insert or overwrite data in memory
 		inMemoryData[sanFilePath][item.Time] = string(dataJSON)
+		dataMutex.Unlock()
 	}
 
 	// Save all modified files to disk
 	for filePath, data := range inMemoryData {
+		dataMutex.RLock() // Read lock for safe concurrent access
 		file, err := os.Create(filePath)
 		if err != nil {
+			dataMutex.RUnlock()
 			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to save .san file: %v", err)})
 			return
 		}
-		func() {
-			defer file.Close()
-
-			encoder := gob.NewEncoder(file)
-			if err := encoder.Encode(data); err != nil {
-				c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to encode data to .san file: %v", err)})
-				return
-			}
-		}()
+		encoder := gob.NewEncoder(file)
+		if err := encoder.Encode(data); err != nil {
+			dataMutex.RUnlock()
+			file.Close()
+			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to encode data to .san file: %v", err)})
+			return
+		}
+		file.Close()
+		dataMutex.RUnlock()
 	}
+
 	c.JSON(201, gin.H{"message": "Data added successfully"})
 }
 
