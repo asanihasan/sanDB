@@ -217,50 +217,60 @@ func get_data(c *gin.Context) {
 				if file.IsDir() {
 					continue
 				}
-			
+
 				segment, err := strconv.Atoi(file.Name()[:len(file.Name())-4])
 				if err != nil {
 					continue
 				}
-			
+
 				if (year == startYear && day == startDay && segment < startSegment) ||
 					(year == endYear && day == endDay && segment > endSegment) {
 					continue
 				}
-			
+
 				filePath := fmt.Sprintf("%s/%s", dayDir, file.Name())
-				fileData := make(map[int64]string)
-			
-				// Open the file
-				f, err := os.Open(filePath)
-				if err != nil {
-					c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to open file: %v", err)})
-					return
-				}
-			
-				// Decode the file and immediately close it after processing
-				func() {
-					defer f.Close()
-			
-					decoder := gob.NewDecoder(f)
+
+				// Check if the file is already in memory
+				dataMutex.RLock()
+				fileData, exists := inMemoryData[filePath]
+				dataMutex.RUnlock()
+
+				if !exists {
+					// Load the file into memory
+					dataMutex.Lock()
+					file, err := os.Open(filePath)
+					if err != nil {
+						dataMutex.Unlock()
+						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to open file: %v", err)})
+						return
+					}
+
+					defer file.Close()
+
+					fileData = make(map[int64]string)
+					decoder := gob.NewDecoder(file)
 					if err := decoder.Decode(&fileData); err != nil {
+						dataMutex.Unlock()
 						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode file: %v", err)})
 						return
 					}
-				}()
-			
-				// Process the file data
+
+					inMemoryData[filePath] = fileData
+					dataMutex.Unlock()
+				}
+
+				// Filter data by timestamp range
 				for ts, data := range fileData {
 					if ts >= start && ts <= end {
 						var deserializedData interface{}
-			
+
 						// Attempt to unmarshal the data into a generic interface{}
 						err := json.Unmarshal([]byte(data), &deserializedData)
 						if err != nil {
 							// If unmarshaling fails, keep the original data as is
 							deserializedData = data
 						}
-			
+
 						result = append(result, map[string]interface{}{
 							"time": ts,
 							"data": deserializedData,
@@ -316,7 +326,10 @@ func delete_data(c *gin.Context) {
 	endTime := time.UnixMilli(end)
 
 	startYear, startDay := startTime.Year(), startTime.YearDay()
+	startSegment := (startTime.Hour() / 6) + 1
+
 	endYear, endDay := endTime.Year(), endTime.YearDay()
+	endSegment := (endTime.Hour() / 6) + 1
 
 	// Loop through years
 	for year := startYear; year <= endYear; year++ {
@@ -355,58 +368,74 @@ func delete_data(c *gin.Context) {
 					continue
 				}
 
+				segment, err := strconv.Atoi(file.Name()[:len(file.Name())-4])
+				if err != nil {
+					continue
+				}
+
 				filePath := fmt.Sprintf("%s/%s", dayDir, file.Name())
 
-				if (year == startYear && day == startDay) || (year == endYear && day == endDay) {
-					// Edge file: Modify contents
-					fileData := make(map[int64]string)
-					f, err := os.Open(filePath)
+				if (year == startYear && day == startDay && segment < startSegment) ||
+					(year == endYear && day == endDay && segment > endSegment) {
+					continue
+				}
+
+				// Check if the file is already in memory
+				dataMutex.Lock()
+				fileData, exists := inMemoryData[filePath]
+				if !exists {
+					// Load the file into memory
+					file, err := os.Open(filePath)
 					if err != nil {
+						dataMutex.Unlock()
 						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to open file: %v", err)})
 						return
 					}
-					defer f.Close()
 
-					decoder := gob.NewDecoder(f)
+					defer file.Close()
+
+					fileData = make(map[int64]string)
+					decoder := gob.NewDecoder(file)
 					if err := decoder.Decode(&fileData); err != nil {
+						dataMutex.Unlock()
 						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to decode file: %v", err)})
 						return
 					}
+					inMemoryData[filePath] = fileData
+				}
 
-					// Remove data inside the range
-					for ts := range fileData {
-						if ts >= start && ts <= end {
-							delete(fileData, ts)
-						}
+				// Remove data inside the range from inMemoryData
+				for ts := range fileData {
+					if ts >= start && ts <= end {
+						delete(fileData, ts)
 					}
+				}
 
-					// Rewrite the file
-					f, err = os.Create(filePath)
+				// Rewrite the file if data remains, otherwise delete the file
+				if len(fileData) > 0 {
+					file, err := os.Create(filePath)
 					if err != nil {
+						dataMutex.Unlock()
 						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to rewrite file: %v", err)})
 						return
 					}
-					defer f.Close()
+					defer file.Close()
 
-					encoder := gob.NewEncoder(f)
+					encoder := gob.NewEncoder(file)
 					if err := encoder.Encode(fileData); err != nil {
+						dataMutex.Unlock()
 						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to encode file: %v", err)})
 						return
 					}
 				} else {
-					// Delete the file
 					if err := os.Remove(filePath); err != nil {
+						dataMutex.Unlock()
 						c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to delete file: %v", err)})
 						return
 					}
+					delete(inMemoryData, filePath) // Remove from inMemoryData
 				}
-			}
-
-			// Remove empty day directory if not start or end day
-			if day != startDay && day != endDay {
-				if err := os.Remove(dayDir); err == nil {
-					continue
-				}
+				dataMutex.Unlock()
 			}
 		}
 	}
