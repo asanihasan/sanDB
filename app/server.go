@@ -7,13 +7,7 @@ import (
 )
 
 func StartServer() {
-	config, err := LoadConfig()
-	if err != nil {
-		fmt.Printf("Error loading config: %v\n", err)
-		return
-	}
-
-	addr := fmt.Sprintf(":%d", config.Server.Port)
+	addr := fmt.Sprintf(":%d", AppConfig.Server.Port)
 	fmt.Printf("Starting Gin server on %s...\n", addr)
 
 	// Initialize the Gin router
@@ -22,7 +16,7 @@ func StartServer() {
 	// Middleware to check authorization token
 	r.Use(func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
-		if token != config.Server.Token {
+		if token != AppConfig.Server.Token {
 			c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized"})
 			return
 		}

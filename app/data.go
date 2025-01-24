@@ -7,14 +7,15 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 var (
-	inMemoryData = make(map[string]map[int64]string) // File path -> Data map
+	inMemoryData        = make(map[string]map[int64][]byte) // File path -> Data map
+	lastAccessTimestamps = make(map[string]int64)          // File path -> Last access timestamp
 	dataMutex    sync.RWMutex                       // Mutex to handle concurrent access
 )
 
@@ -34,6 +35,7 @@ func add_data(c *gin.Context) {
 		Time int64       `json:"time"` // Millisecond timestamp
 		Data interface{} `json:"data"` // Data can be any JSON type
 	}
+	
 	if err := c.ShouldBindJSON(&requestData); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request body"})
 		return
@@ -45,7 +47,7 @@ func add_data(c *gin.Context) {
 			return
 		}
 
-		// Convert `item.Data` to JSON string
+		// Convert `item.Data` to JSON byte slice
 		dataJSON, err := json.Marshal(item.Data)
 		if err != nil {
 			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to process data: %v", err)})
@@ -71,7 +73,7 @@ func add_data(c *gin.Context) {
 		// Safely load file into memory if not already loaded
 		dataMutex.Lock()
 		if _, exists := inMemoryData[sanFilePath]; !exists {
-			inMemoryData[sanFilePath] = make(map[int64]string)
+			inMemoryData[sanFilePath] = make(map[int64][]byte)
 
 			// Load existing data if the file exists
 			if _, err := os.Stat(sanFilePath); !os.IsNotExist(err) {
@@ -84,7 +86,7 @@ func add_data(c *gin.Context) {
 				defer file.Close()
 
 				// Temporary variable to decode data
-				var tempData map[int64]string
+				var tempData map[int64][]byte
 				decoder := gob.NewDecoder(file)
 				if err := decoder.Decode(&tempData); err != nil {
 					dataMutex.Unlock()
@@ -96,7 +98,11 @@ func add_data(c *gin.Context) {
 		}
 
 		// Insert or overwrite data in memory
-		inMemoryData[sanFilePath][item.Time] = string(dataJSON)
+		inMemoryData[sanFilePath][item.Time] = dataJSON
+
+		// Update the last access timestamp
+		lastAccessTimestamps[sanFilePath] = time.Now().Unix()
+
 		dataMutex.Unlock()
 	}
 
@@ -247,7 +253,7 @@ func get_data(c *gin.Context) {
 
 					defer file.Close()
 
-					fileData = make(map[int64]string)
+					fileData = make(map[int64][]byte)
 					decoder := gob.NewDecoder(file)
 					if err := decoder.Decode(&fileData); err != nil {
 						dataMutex.Unlock()
@@ -265,10 +271,10 @@ func get_data(c *gin.Context) {
 						var deserializedData interface{}
 
 						// Attempt to unmarshal the data into a generic interface{}
-						err := json.Unmarshal([]byte(data), &deserializedData)
+						err := json.Unmarshal(data, &deserializedData)
 						if err != nil {
 							// If unmarshaling fails, keep the original data as is
-							deserializedData = data
+							deserializedData = string(data)
 						}
 
 						result = append(result, map[string]interface{}{
@@ -394,7 +400,7 @@ func delete_data(c *gin.Context) {
 
 					defer file.Close()
 
-					fileData = make(map[int64]string)
+					fileData = make(map[int64][]byte)
 					decoder := gob.NewDecoder(file)
 					if err := decoder.Decode(&fileData); err != nil {
 						dataMutex.Unlock()
@@ -434,6 +440,7 @@ func delete_data(c *gin.Context) {
 						return
 					}
 					delete(inMemoryData, filePath) // Remove from inMemoryData
+					delete(lastAccessTimestamps, filePath) // Remove from lastAccessTimestamps
 				}
 				dataMutex.Unlock()
 			}

@@ -12,12 +12,26 @@ type Config struct {
 		Port  int    `yaml:"port"`
 		Token string `yaml:"token"`
 	} `yaml:"server"`
+	Memory struct {
+		MaxData int `yaml:"max-data"`
+		MaxSize int `yaml:"max-size"`
+	} `yaml:"memory"`
+}
+
+var AppConfig *Config
+
+func init() {
+	var err error
+	AppConfig, err = LoadConfig()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to load config: %v", err))
+	}
 }
 
 func LoadConfig() (*Config, error) {
-	path := "config/config.yml" // Path is now hardcoded
+	path := "config/config.yml"
 
-data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
