@@ -106,29 +106,33 @@ func add_data(c *gin.Context) {
 		dataMutex.Unlock()
 	}
 
+	go save_to_disk();
+
+	c.JSON(201, gin.H{"message": "Data added successfully"})
+}
+
+func save_to_disk() {
 	// Save all modified files to disk
 	for filePath, data := range inMemoryData {
 		dataMutex.RLock() // Read lock for safe concurrent access
 		file, err := os.Create(filePath)
 		if err != nil {
 			dataMutex.RUnlock()
-			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to save .san file: %v", err)})
+			fmt.Printf("Failed to save .san file %s: %v\n", filePath, err)
 			return
 		}
 		encoder := gob.NewEncoder(file)
 		if err := encoder.Encode(data); err != nil {
 			dataMutex.RUnlock()
 			file.Close()
-			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to encode data to .san file: %v", err)})
+			fmt.Printf("Failed to encode data to .san file %s: %v\n", filePath, err)
 			return
 		}
 		file.Close()
 		dataMutex.RUnlock()
 	}
-
-	c.JSON(201, gin.H{"message": "Data added successfully"})
 }
-
+ 
 func get_data(c *gin.Context) {
 	dataPath := "./data" // Base directory for data
 	collectionName := c.Param("collection_name")
