@@ -4,6 +4,11 @@ import (
 	"sort"
 )
 
+func memoryManagement() {
+	MaintainMaxDataLength()
+	MaintainMaxMemorySize()
+}
+
 // Check and maintain max data length in inMemoryData
 func MaintainMaxDataLength() {
 	dataMutex.Lock()

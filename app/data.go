@@ -111,7 +111,7 @@ func add_data(c *gin.Context) {
 	c.JSON(201, gin.H{"message": "Data added successfully"})
 }
 
-func save_to_disk() {
+func save_to_disk() { // this part need to be improved soon
 	// Save all modified files to disk
 	for filePath, data := range inMemoryData {
 		dataMutex.RLock() // Read lock for safe concurrent access
@@ -131,6 +131,8 @@ func save_to_disk() {
 		file.Close()
 		dataMutex.RUnlock()
 	}
+
+	memoryManagement()
 }
  
 func get_data(c *gin.Context) {
@@ -304,6 +306,7 @@ func get_data(c *gin.Context) {
 		result = result[:limit]
 	}
 
+	go memoryManagement()
 	c.JSON(200, gin.H{"data": result})
 }
 
