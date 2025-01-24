@@ -41,6 +41,8 @@ func add_data(c *gin.Context) {
 		return
 	}
 
+	nowTime := time.Now().Unix()
+
 	for _, item := range requestData {
 		if item.Time <= 0 {
 			c.JSON(400, gin.H{"error": "Each item must have a valid 'time'"})
@@ -101,32 +103,38 @@ func add_data(c *gin.Context) {
 		inMemoryData[sanFilePath][item.Time] = dataJSON
 
 		// Update the last access timestamp
-		lastAccessTimestamps[sanFilePath] = time.Now().Unix()
+		lastAccessTimestamps[sanFilePath] = nowTime
 
 		dataMutex.Unlock()
 	}
 
-	go save_to_disk();
+	go save_to_disk(nowTime);
 
 	c.JSON(201, gin.H{"message": "Data added successfully"})
 }
 
-func save_to_disk() { // this part need to be improved soon
-	// Save all modified files to disk
+func save_to_disk(timestamp int64) {
+	// Save only files with the specified timestamp
 	for filePath, data := range inMemoryData {
 		dataMutex.RLock() // Read lock for safe concurrent access
+		fileTimestamp, exists := lastAccessTimestamps[filePath]
+		if !exists || fileTimestamp != timestamp {
+			dataMutex.RUnlock()
+			continue
+		}
+
 		file, err := os.Create(filePath)
 		if err != nil {
 			dataMutex.RUnlock()
 			fmt.Printf("Failed to save .san file %s: %v\n", filePath, err)
-			return
+			continue
 		}
 		encoder := gob.NewEncoder(file)
 		if err := encoder.Encode(data); err != nil {
 			dataMutex.RUnlock()
 			file.Close()
 			fmt.Printf("Failed to encode data to .san file %s: %v\n", filePath, err)
-			return
+			continue
 		}
 		file.Close()
 		dataMutex.RUnlock()
