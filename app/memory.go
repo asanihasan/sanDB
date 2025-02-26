@@ -2,7 +2,18 @@ package app
 
 import (
 	"sort"
+	"time"
+	"fmt"
 )
+
+func StartMemoryManager() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		go memoryManagement()
+	}
+}
 
 func memoryManagement() {
 	MaintainMaxDataLength()
@@ -13,6 +24,8 @@ func memoryManagement() {
 func MaintainMaxDataLength() {
 	dataMutex.Lock()
 	defer dataMutex.Unlock()
+
+	fmt.Println("Current Data:", len(lastAccessTimestamps), "Files")
 
 	if len(lastAccessTimestamps) > AppConfig.Memory.MaxData {
 		// Sort file paths by last access timestamps (oldest first)
@@ -50,6 +63,7 @@ func MaintainMaxMemorySize() {
 	}
 
 	currentSize := calculateMemorySize()
+	fmt.Println("Current memory size:", currentSize, "MB")
 
 	if currentSize > AppConfig.Memory.MaxSize {
 		// Sort file paths by last access timestamps (oldest first)

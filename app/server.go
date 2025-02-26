@@ -2,7 +2,12 @@ package app
 
 import (
 	"fmt"
-
+	"context"
+	"net/http"
+	"time"
+	"os"
+	"os/signal"
+	"syscall"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,10 +15,7 @@ func StartServer() {
 	addr := fmt.Sprintf(":%d", AppConfig.Server.Port)
 	fmt.Printf("Starting Gin server on %s...\n", addr)
 
-	// Initialize the Gin router
 	r := gin.Default()
-
-	// Middleware to check authorization token
 	r.Use(func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
 		if token != AppConfig.Server.Token {
@@ -23,13 +25,43 @@ func StartServer() {
 		c.Next()
 	})
 
-	// Define routes
 	RegisterRoutes(r)
 
-	// Start the server
-	if err := r.Run(addr); err != nil {
-		fmt.Printf("Failed to start server: %v\n", err)
+	// Create HTTP server with timeout settings
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  time.Duration(AppConfig.Server.Timeout.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(AppConfig.Server.Timeout.WriteTimeout) * time.Second,
+		IdleTimeout:  time.Duration(AppConfig.Server.Timeout.IdleTimeout) * time.Second,
 	}
+
+	// Run the server in a Goroutine so it doesn’t block
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("Failed to start server: %v\n", err)
+		}
+	}()
+
+	// Capture termination signals (CTRL+C, Docker Stop, Kubernetes SIGTERM)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit // Wait for termination signal
+
+	fmt.Println("\nShutting down server...")
+
+	// Convert YAML shutdown-timeout value to duration
+	shutdownTimeout := time.Duration(AppConfig.Server.ShutdownTimeout) * time.Second
+
+	// Create a timeout context for shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		fmt.Printf("Server forced to shutdown: %v\n", err)
+	}
+
+	fmt.Println("Server gracefully stopped.")
 }
 
 // RegisterRoutes defines all routes for the application.

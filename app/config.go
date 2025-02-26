@@ -9,8 +9,14 @@ import (
 
 type Config struct {
 	Server struct {
-		Port  int    `yaml:"port"`
-		Token string `yaml:"token"`
+		Port           int `yaml:"port"`
+		Token          string `yaml:"token"`
+		Timeout struct {
+			ReadTimeout  int `yaml:"ReadTimeout"`
+			WriteTimeout int `yaml:"WriteTimeout"`
+			IdleTimeout  int `yaml:"IdleTimeout"`
+		} `yaml:"timeout"`
+		ShutdownTimeout int `yaml:"shutdown-timeout"` // New field
 	} `yaml:"server"`
 	Memory struct {
 		MaxData int `yaml:"max-data"`
@@ -26,6 +32,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
+	go StartMemoryManager()
 }
 
 func LoadConfig() (*Config, error) {

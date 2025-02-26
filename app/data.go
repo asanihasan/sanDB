@@ -140,7 +140,6 @@ func save_to_disk(timestamp int64) {
 		dataMutex.RUnlock()
 	}
 
-	memoryManagement()
 }
  
 func get_data(c *gin.Context) {
@@ -188,6 +187,8 @@ func get_data(c *gin.Context) {
 			return
 		}
 	}
+
+	nowTime := time.Now().Unix()
 
 	// Convert start and end timestamps
 	startTime := time.UnixMilli(start)
@@ -275,7 +276,12 @@ func get_data(c *gin.Context) {
 						return
 					}
 
+					// Insert or overwrite data in memory
 					inMemoryData[filePath] = fileData
+
+					// Update the last access timestamp
+					lastAccessTimestamps[filePath] = nowTime
+
 					dataMutex.Unlock()
 				}
 
@@ -314,7 +320,6 @@ func get_data(c *gin.Context) {
 		result = result[:limit]
 	}
 
-	go memoryManagement()
 	c.JSON(200, gin.H{"data": result})
 }
 

@@ -1,6 +1,12 @@
 server:
   port: 6969
   token: "525oJRx5rMOhWqjYa9qUPg3pyEKPbtCl2b1qksYFXOyqomc2ZpbM0dxOS4sEj1GsjwMb6vIqzezV7H9vXxQBuqzvWAGSS2eR8hFB3twFhdOIFm6jdJTUo51DQwX9paZx"
+  timeout:
+    ReadTimeout: 10
+    WriteTimeout: 10
+    IdleTimeout: 120
+  shutdown-timeout: 5
+
 memory:
   max-data: 1000
   max-size: 256
